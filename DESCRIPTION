@@ -1,0 +1,15 @@
+Package: parochial_east_london
+Title: parochial_east_london
+Version: 0.0.1
+Authors@R: c(
+  person("Adam", "Watkins", email = "adam@stupidpupil.co.uk", role = c("aut", "cre"))
+  )
+Description: Parochial for East London
+License: GPL (>= 3)
+Encoding: UTF-8
+Depends: 
+  R (>= 2.10),
+  parochial,
+  dotenv
+Remotes:
+  stupidpupil/parochial
