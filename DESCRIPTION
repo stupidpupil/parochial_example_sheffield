@@ -1,10 +1,10 @@
-Package: parochial_east_london
-Title: parochial_east_london
+Package: parochial_sheffield
+Title: parochial_sheffield
 Version: 0.0.1
 Authors@R: c(
   person("Adam", "Watkins", email = "adam@stupidpupil.co.uk", role = c("aut", "cre"))
   )
-Description: Parochial for East London
+Description: Parochial for Sheffield
 License: GPL (>= 3)
 Encoding: UTF-8
 Depends: 
