@@ -54,6 +54,7 @@ jobs:
       with:
         repository: Project-OSRM/osrm-backend
         path: osrm-backend
+        ref: 204fdaff6e83fe336db74a84db5adb3320a9a3ed
     - name: Get osrm-backend ref
       id: osrm-backend-ref
       run: |
@@ -66,11 +67,12 @@ jobs:
         path: |
           osrm-backend/build
           osrm-backend/mason_packages
-        key: ${{ runner.os }}-${{ steps.osrm-backend-ref.outputs.ref }}-osrm-v3
+        key: ${{ runner.os }}-${{ steps.osrm-backend-ref.outputs.ref }}-osrm-v1
     - name: Build osrm-backend
       if: steps.cache_osrm_backend_build.outputs.cache-hit != 'true'
       run: |
         cd osrm-backend
+        rm -rf build
         mkdir build
         cd build
         cmake ../ -DENABLE_MASON=1
@@ -141,22 +143,6 @@ jobs:
         devtools::load_all()
         download_terrain50()
       shell: Rscript {0}
-    - name: Deal with some upsetting zips with DEFLATE64 compression
-      if: steps.cache_terrain50.outputs.cache-hit != 'true'
-      run: |
-        cd data-raw
-
-        unzip terr50_gagg_gb.zip "data/sd/sd67_OST50GRID_20220506.zip"
-        zip -d terr50_gagg_gb.zip "data/sd/sd67_OST50GRID_20220506.zip"
-        zip terr50_gagg_gb.zip "data/sd/sd67_OST50GRID_20220506.zip"
-
-
-        unzip terr50_gagg_gb.zip "data/sd/sd68_OST50GRID_20220506.zip"
-        zip -d terr50_gagg_gb.zip "data/sd/sd68_OST50GRID_20220506.zip"
-        zip terr50_gagg_gb.zip "data/sd/sd68_OST50GRID_20220506.zip"
-
-        cd ..
-
     - name: Prepare_terrain
       if: steps.cache_terrain50.outputs.cache-hit != 'true'
       run: |
@@ -1048,7 +1034,7 @@ jobs:
         chmod ugo+x assets/otp_and_graph/run-otp.sh
         curl https://raw.githubusercontent.com/opentripplanner/OpenTripPlanner/dev-2.x/LICENSE -o assets/otp_and_graph/OTP_LICENSE
         cp output/opentripplanner/graph.obj* assets/otp_and_graph/graph/
-        cp /Users/runner/work/_temp/Library/parochial/extdata/otp_config/router-config.json assets/otp_and_graph/graph/
+        cp  /Users/runner/work/_temp/Library/parochial/extdata/otp_config/router-config.json assets/otp_and_graph/graph/
         cd assets
         zip -9 -r otp_and_graph.zip otp_and_graph/
         cd ..
@@ -1077,6 +1063,29 @@ jobs:
         cp output/osrm_driving/* assets/osrm_driving/
         cd assets
         zip -9 -r osrm_driving.zip osrm_driving/
+        cd ..
+    - name: Checkout graph-releases branch
+      uses: actions/checkout@v2
+      with:
+        ref: graph-releases
+        path: graph-releases
+    - name: Get timestamp for release
+      id: timestamp
+      env:
+        TZ: Europe/London
+      run: echo "::set-output name=timestamp::$(date +'%Y-%m-%dT%H-%M-%S')"
+    - name: Copy READMEs and other files
+      run: |
+        cd graph-releases
+        rm -rf file_metadata
+        mkdir file_metadata
+        cp ../output/*-bounds.geojson bounds.geojson
+        cp ../output/*.meta.json file_metadata/
+        cp ../output/*/*.meta.json file_metadata/
+        cp ../output/map.png map.png
+        cp ../output/test_journeys.csv test_journeys.csv
+        cp ../output/output_readme.html index.html
+        cp ../output/output_readme.md README.md
         cd ..
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
