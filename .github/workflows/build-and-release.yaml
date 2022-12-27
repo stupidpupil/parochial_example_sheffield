@@ -1,7 +1,7 @@
 'on':
   workflow_dispatch: ~
-  schedule:
-  - cron: 25 5 * * 1
+  #schedule:
+  #- cron: 25 5 * * 1
 name: build-and-release
 jobs:
   build_pfaedle:
@@ -9,7 +9,7 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         repository: stupidpupil/pfaedle
         submodules: yes
@@ -18,11 +18,11 @@ jobs:
     - name: Get pfaedle ref
       id: pfaedle-ref
       run: |
-        echo "::set-output name=ref::$(git -C pfaedle rev-parse HEAD)"
+        echo "ref=$(git -C pfaedle rev-parse HEAD)" >> $GITHUB_OUTPUT
       shell: bash
     - name: Cache pfaedle-build
       id: cache_pfaedle_build
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           pfaedle-build
@@ -40,7 +40,7 @@ jobs:
         chmod -R ug+rw pfaedle-build/
       shell: bash
     - name: Upload pfaedle artefact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: pfaedle
         path: pfaedle-build
@@ -50,7 +50,7 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         repository: Project-OSRM/osrm-backend
         path: osrm-backend
@@ -58,16 +58,16 @@ jobs:
     - name: Get osrm-backend ref
       id: osrm-backend-ref
       run: |
-        echo "::set-output name=ref::$(git -C osrm-backend rev-parse HEAD)"
+        echo "ref=$(git -C osrm-backend rev-parse HEAD)" >> $GITHUB_OUTPUT
       shell: bash
     - name: Cache osrm-backend/build
       id: cache_osrm_backend_build
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           osrm-backend/build
           osrm-backend/mason_packages
-        key: ${{ runner.os }}-${{ steps.osrm-backend-ref.outputs.ref }}-osrm-v1
+        key: ${{ runner.os }}-${{ steps.osrm-backend-ref.outputs.ref }}-osrm-v2
     - name: Build osrm-backend
       if: steps.cache_osrm_backend_build.outputs.cache-hit != 'true'
       run: |
@@ -78,21 +78,39 @@ jobs:
         cmake ../ -DENABLE_MASON=1
         make
         cd ../../
-        rm -r osrm-backend/build/CMakeFiles
-        rm osrm-backend/build/libosrm*
-        rm -r osrm-backend/build/flatbuffers-build
-        rm -r osrm-backend/mason_packages/headers/
-        rm -r osrm-backend/mason_packages/.binaries/
-        rm -r osrm-backend/third_party/
-        rm -r osrm-backend/unit_tests/
-        rm -r osrm-backend/src/
-        rm -r osrm-backend/docs/
-        rm -r osrm-backend/features/
-        rm -r osrm-backend/include/
-        rm -r osrm-backend/test/
+      shell: bash
+    - name: Clean osrm-backend
+      run: |
+        rm -rf osrm-backend/build/CMakeFiles
+        rm -rf osrm-backend/build/libosrm*
+        rm -rf osrm-backend/build/flatbuffers-build
+        rm -rf osrm-backend/mason_packages/headers/
+        rm -rf osrm-backend/mason_packages/.binaries/
+        rm -rf osrm-backend/third_party/
+        rm -rf osrm-backend/unit_tests/
+        rm -rf osrm-backend/src/
+        rm -rf osrm-backend/docs/
+        rm -rf osrm-backend/features/
+        rm -rf osrm-backend/include/
+        rm -rf osrm-backend/test/
+        rm -rf osrm-backend/.git
+        rm -rf osrm-backend/.github
+        find osrm-backend -name "*.c" -type f -delete
+        find osrm-backend -name "*.cc" -type f -delete
+        find osrm-backend -name "*.h" -type f -delete
+        find osrm-backend -name "*.cpp" -type f -delete
+        find osrm-backend -name "*.hpp" -type f -delete
+        find osrm-backend -name "*.py" -type f -delete
+        find osrm-backend -name "*.md" -type f -delete
+        find osrm-backend -name "*.rst" -type f -delete
+        find osrm-backend -name "*.txt" -type f -delete
+        find osrm-backend -name "*.pbf" -type f -delete
+        find osrm-backend -name "*.rs" -type f -delete
+        find osrm-backend -name "*.png" -type f -delete
+        find osrm-backend -name "*.jpg" -type f -delete
       shell: bash
     - name: Upload osrm artefact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: osrm
         path: osrm-backend
@@ -100,14 +118,14 @@ jobs:
   download_and_prepare_terrain:
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Get Terrain 50 md5
       id: terrain50_md5
       run: |
-        echo "::set-output name=md5::$(curl "https://api.os.uk/downloads/v1/products/Terrain50/downloads" | jq '.[0].md5')"
+        echo "md5=$(curl 'https://api.os.uk/downloads/v1/products/Terrain50/downloads' | jq '.[0].md5')" >> $GITHUB_OUTPUT
     - name: Cache Terrain 50
       id: cache_terrain50
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           output/*terr50*
@@ -150,7 +168,7 @@ jobs:
         prepare_terrain50()
       shell: Rscript {0}
     - name: Upload Terrain 50 artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: terr50.tif
         path: output/*terr50*
@@ -166,14 +184,14 @@ jobs:
   download_and_prepare_osm:
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Get Geofabrik ETag
       id: geofabrik_etag
       run: |
-        echo "::set-output name=etag::$(curl -I "https://download.geofabrik.de/europe/great-britain-latest.osm.pbf" | grep "ETag")"
+        echo "etag=$(curl -I 'https://download.geofabrik.de/europe/great-britain-latest.osm.pbf' | grep 'ETag')" >> $GITHUB_OUTPUT
     - name: Cache OSM
       id: cache_osm
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           output/openstreetmap/*
@@ -214,7 +232,7 @@ jobs:
         download_and_prepare_osm()
       shell: Rscript {0}
     - name: Upload OpenStreetMap artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: openstreetmap
         path: output/openstreetmap/*
@@ -233,26 +251,26 @@ jobs:
     - download_and_prepare_osm
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Download OpenStreetMap artifact
       uses: actions/download-artifact@v2
       with:
         name: openstreetmap
         path: output/openstreetmap/
     - name: Download Terrain 50 artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: terr50.tif
         path: output
     - name: Derive hash from ParochialCacheKeys
       id: parochial_cache_keys
       run: |-
-        echo "::set-output name=hash::$(
+        echo "hash=$(
           ls output/*/*.meta.json output/*.meta.json | sort | xargs jq .ParochialCacheKey | shasum -a 1
-        )"
+        )" >> $GITHUB_OUTPUT
     - name: Cache street graph
       id: cache_street_graph
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: output/opentripplanner/streetGraph.obj*
         key: ${{ hashFiles('config.yml') }}-${{ steps.parochial_cache_keys.outputs.hash
@@ -290,12 +308,12 @@ jobs:
       shell: Rscript {0}
     - name: Cache OTP elevation lookups
       if: steps.cache_street_graph.outputs.cache-hit != 'true'
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: data-raw/otp_cache/*
         key: ${{ hashFiles('output/*terr50*') }}
     - name: Install Java 17
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v3
       with:
         distribution: adopt
         java-version: '17'
@@ -307,7 +325,7 @@ jobs:
         prepare_street_graph()
       shell: Rscript {0}
     - name: Upload street graph artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: streetGraph.obj
         path: output/opentripplanner/streetGraph.obj*
@@ -326,7 +344,7 @@ jobs:
     - download_and_prepare_osm
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Download OpenStreetMap artifact
       uses: actions/download-artifact@v2
       with:
@@ -345,12 +363,12 @@ jobs:
     - name: Derive hash from ParochialCacheKeys
       id: parochial_cache_keys
       run: |-
-        echo "::set-output name=hash::$(
+        echo "hash=$(
           ls output/*/*.meta.json output/*.meta.json | sort | xargs jq .ParochialCacheKey | shasum -a 1
-        )"
+        )" >> $GITHUB_OUTPUT
     - name: Cache OSRM graph
       id: cache_street_graph
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: output/osrm_driving/*
         key: ${{ hashFiles('config.yml') }}-${{ steps.parochial_cache_keys.outputs.hash
@@ -387,7 +405,7 @@ jobs:
         prepare_osrm_graph()
       shell: Rscript {0}
     - name: Upload osrm outputs artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: osrm-graph
         path: output/osrm_driving/*
@@ -403,7 +421,7 @@ jobs:
   download_and_prepare_atoc:
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: r-lib/actions/setup-r@v2
     - uses: r-lib/actions/setup-pandoc@v1
     - name: Query dependencies
@@ -428,11 +446,11 @@ jobs:
       id: atoc_url
       run: |
         devtools::load_all()
-        cat(paste0("::set-output name=url::", get_atoc_download_url(),"\n"))
+        cat(paste0("url=", get_atoc_download_url(),"\n"), file=Sys.getenv("GITHUB_OUTPUT"))
       shell: Rscript {0}
     - name: Cache ATOC
       id: cache_atoc
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           output/gtfs/atoc.*.gtfs.zip*
@@ -445,7 +463,7 @@ jobs:
         prepare_atoc_gtfs()
       shell: Rscript {0}
     - name: Upload ATOC GTFS artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: atoc.gtfs.zip
         path: output/gtfs/atoc.*.gtfs.zip*
@@ -461,16 +479,16 @@ jobs:
   download_and_prepare_tnds:
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Get TNDS directory listing hash
       id: tnds_dir_list_hash
       run: |
-        echo "::set-output name=hash::$(
-          curl -s ftp://$TNDS_USERNAME:$TNDS_PASSWORD@ftp.tnds.basemap.co.uk | sort | shasum -a 1
-        )"
+        echo "hash=$(
+          curl -s 'ftp://$TNDS_USERNAME:$TNDS_PASSWORD@ftp.tnds.basemap.co.uk' | sort | shasum -a 1
+        )" >> $GITHUB_OUTPUT
     - name: Cache TNDS
       id: cache_tnds
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           output/gtfs/*.tnds.*.gtfs.zip*
@@ -509,7 +527,7 @@ jobs:
         prepare_tnds_gtfs()
       shell: Rscript {0}
     - name: Upload TNDS GTFS artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: tnds.gtfs.zip
         path: output/gtfs/*.tnds.*.gtfs.zip*
@@ -525,14 +543,14 @@ jobs:
   download_and_prepare_bods:
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Get BODS index page hash
       id: bods_index_page_hash
       run: |
-        echo "::set-output name=hash::$(curl "https://data.bus-data.dft.gov.uk/timetable/download/" | md5)"
+        echo "hash=$(curl 'https://data.bus-data.dft.gov.uk/timetable/' | md5)" >> $GITHUB_OUTPUT
     - name: Cache BODS
       id: cache_bods
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: output/gtfs/*.bods.*.gtfs.zip*
         key: ${{ steps.bods_index_page_hash.outputs.hash }}-${{ hashFiles('config.yml')
@@ -569,7 +587,7 @@ jobs:
         download_and_prepare_bods_gtfs()
       shell: Rscript {0}
     - name: Upload BODS GTFS artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: bods.gtfs.zip
         path: output/gtfs/*.bods.*.gtfs.zip*
@@ -591,19 +609,19 @@ jobs:
     - build_pfaedle
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Download ATOC GTFS artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: atoc.gtfs.zip
         path: output/gtfs
     - name: Download TNDS GTFS artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: tnds.gtfs.zip
         path: output/gtfs
     - name: Download BODS GTFS artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: bods.gtfs.zip
         path: output/gtfs
@@ -615,12 +633,12 @@ jobs:
     - name: Derive hash from ParochialCacheKeys
       id: parochial_cache_keys
       run: |-
-        echo "::set-output name=hash::$(
+        echo "hash=$(
           ls output/*/*.meta.json output/*.meta.json | sort | xargs jq .ParochialCacheKey | shasum -a 1
-        )"
+        )" >> $GITHUB_OUTPUT
     - name: Cache Merged GTFS
       id: cache_merged_gtfs
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           output/gtfs/merged.*.gtfs.zip*
@@ -679,7 +697,7 @@ jobs:
         prepare_merged_gtfs(should_pfaedle = TRUE)
       shell: Rscript {0}
     - name: Upload Merged GTFS artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: merged.gtfs.zip
         path: output/gtfs/merged.*.gtfs.zip*
@@ -696,7 +714,7 @@ jobs:
     needs: merge_and_pfaedle_gtfs
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: r-lib/actions/setup-r@v2
     - uses: r-lib/actions/setup-pandoc@v1
     - name: Query dependencies
@@ -728,7 +746,7 @@ jobs:
         prepare_pretty_map()
       shell: Rscript {0}
     - name: Upload map artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: map.png
         path: output/map*.png*
@@ -748,26 +766,26 @@ jobs:
     - merge_and_pfaedle_gtfs
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Download Merged GTFS artifact
       uses: actions/download-artifact@v2
       with:
         name: merged.gtfs.zip
         path: output/gtfs
     - name: Download street graph artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: streetGraph.obj
         path: output/opentripplanner
     - name: Derive hash from ParochialCacheKeys
       id: parochial_cache_keys
       run: |-
-        echo "::set-output name=hash::$(
+        echo "hash=$(
           ls output/*/*.meta.json output/*.meta.json | sort | xargs jq .ParochialCacheKey | shasum -a 1
-        )"
+        )" >> $GITHUB_OUTPUT
     - name: Cache transport graph
       id: cache_transport_graph
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           output/opentripplanner/graph.obj*
@@ -806,7 +824,7 @@ jobs:
         download_otp()
       shell: Rscript {0}
     - name: Install Java 17
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v3
       with:
         distribution: adopt
         java-version: '17'
@@ -818,7 +836,7 @@ jobs:
         prepare_transport_graph()
       shell: Rscript {0}
     - name: Upload transport graph artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: graph.obj
         path: output/opentripplanner/graph.obj*
@@ -837,7 +855,7 @@ jobs:
     - merge_and_pfaedle_gtfs
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Download OpenStreetMap artifact
       uses: actions/download-artifact@v2
       with:
@@ -851,12 +869,12 @@ jobs:
     - name: Derive hash from ParochialCacheKeys
       id: parochial_cache_keys
       run: |-
-        echo "::set-output name=hash::$(
+        echo "hash=$(
           ls output/*/*.meta.json output/*.meta.json | sort | xargs jq .ParochialCacheKey | shasum -a 1
-        )"
+        )" >> $GITHUB_OUTPUT
     - name: Cache r5r network.dat
       id: cache_network_dat
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           output/r5r/network.dat*
@@ -889,7 +907,7 @@ jobs:
       if: steps.cache_network_dat.outputs.cache-hit != 'true'
     - name: Install Java 11
       if: steps.cache_network_dat.outputs.cache-hit != 'true'
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v3
       with:
         distribution: adopt
         java-version: '11'
@@ -900,7 +918,7 @@ jobs:
         prepare_r5r_network_dat()
       shell: Rscript {0}
     - name: Upload r5r network.dat artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: network.dat
         path: output/r5r/network.dat*
@@ -921,9 +939,9 @@ jobs:
     - prepare_final_graph
     runs-on: macOS-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Write config.yml
-      uses: DamianReeves/write-file-action@v1.0
+      uses: DamianReeves/write-file-action@v1.2
       with:
         path: ${{ github.workspace }}/config.yml
         contents: |
@@ -955,7 +973,7 @@ jobs:
         devtools::install_deps(dependencies = TRUE, type = "binary")
       shell: Rscript {0}
     - name: Install Java 17
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v3
       with:
         distribution: adopt
         java-version: '17'
@@ -965,7 +983,7 @@ jobs:
         download_otp()
       shell: Rscript {0}
     - name: Download Terrrain 50 artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: terr50.tif
         path: output
@@ -975,17 +993,17 @@ jobs:
         name: openstreetmap
         path: output/openstreetmap/
     - name: Download ATOC GTFS artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: atoc.gtfs.zip
         path: output/gtfs
     - name: Download TNDS GTFS artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: tnds.gtfs.zip
         path: output/gtfs
     - name: Download BODS GTFS artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: bods.gtfs.zip
         path: output/gtfs
@@ -995,27 +1013,27 @@ jobs:
         name: merged.gtfs.zip
         path: output/gtfs
     - name: Download street graph artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: streetGraph.obj
         path: output/opentripplanner
     - name: Download transport graph artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: graph.obj
         path: output/opentripplanner
     - name: Download network.dat artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: network.dat
         path: output/r5r
     - name: Download osrm graph artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: osrm-graph
         path: output/osrm_driving
     - name: Download pretty map artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: map.png
         path: output
@@ -1065,7 +1083,7 @@ jobs:
         zip -9 -r osrm_driving.zip osrm_driving/
         cd ..
     - name: Checkout graph-releases branch
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         ref: graph-releases
         path: graph-releases
@@ -1073,7 +1091,7 @@ jobs:
       id: timestamp
       env:
         TZ: Europe/London
-      run: echo "::set-output name=timestamp::$(date +'%Y-%m-%dT%H-%M-%S')"
+      run: echo "timestamp=$(date +'%Y-%m-%dT%H-%M-%S')" >> $GITHUB_OUTPUT
     - name: Copy READMEs and other files
       run: |
         cd graph-releases
@@ -1087,6 +1105,25 @@ jobs:
         cp ../output/output_readme.html index.html
         cp ../output/output_readme.md README.md
         cd ..
+    - name: Commit new graph-release
+      if: github.ref == 'refs/heads/main'
+      run: |
+        cd graph-releases
+        git config user.name "Graph Release Bot"
+        git config user.email "<>"
+        git add .
+        git commit -m "Updated for new release"
+        git push origin graph-releases
+        cd ..
+    - name: Release new graph
+      uses: ncipollo/release-action@v1
+      if: github.ref == 'refs/heads/main'
+      with:
+        artifacts: assets/otp_and_graph.zip,assets/gtfs_and_osm.zip,assets/r5r_network_dat.zip,assets/osrm_driving.zip
+        bodyFile: output/release_body.md
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit: graph-releases
+        tag: ${{ steps.timestamp.outputs.timestamp }}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       ATOC_USERNAME: ${{ secrets.ATOC_USERNAME }}
